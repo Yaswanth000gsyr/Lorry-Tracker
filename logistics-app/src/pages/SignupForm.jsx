@@ -1,16 +1,18 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// ✅ Define the API URL using the environment variable
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const SignupForm = () => {
   const navigate = useNavigate();
-  // Initial state
-const [formData, setFormData] = useState({
-  name: "",
-  email: "",
-  password: "",
-  role: "owner",
-  number: "",   // ✅ Add this
-});
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "owner",
+    number: "",
+  });
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -20,31 +22,38 @@ const [formData, setFormData] = useState({
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const res = await fetch("http://localhost:5000/api/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      // ✅ Use the API_URL variable in your fetch call
+      const res = await fetch(`${API_URL}/api/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      alert("Signup successful!");
-      navigate(
-        formData.role === "owner" ? "/owner-dashboard" : "/broker-dashboard"
-      );
-    } else {
-      alert(data.error || "Signup failed");
+      const data = await res.json();
+      if (res.ok) {
+        alert("Signup successful!");
+        // The signup form doesn't have a 'name' field in the state to check.
+        // Assuming navigation is based on role.
+        navigate(
+          formData.role === "owner" ? "/owner-dashboard" : 
+          formData.role === "broker" ? "/broker-dashboard" : 
+          "/driver-dashboard"
+        );
+      } else {
+        // ✅ Use data.message to match your backend's error response
+        alert(data.message || "Signup failed");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      // ✅ Provide a more helpful alert for network errors
+      alert("An error occurred. Could not connect to the server.");
     }
-  } catch (error) {
-    console.error("Error:", error);
-    alert("An error occurred");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -56,6 +65,7 @@ const [formData, setFormData] = useState({
           Signup Form
         </h2>
 
+        {/* Your form inputs remain the same... */}
         <div className="mb-4">
           <label className="block text-gray-700 mb-2">Name</label>
           <input
@@ -110,17 +120,17 @@ const [formData, setFormData] = useState({
         </div>
 
         <div className="mb-4">
-  <label className="block text-gray-700 mb-2">Phone Number</label>
-  <input
-    type="tel"
-    name="number"
-    required
-    value={formData.number}
-    onChange={handleChange}
-    className="w-full border px-3 py-2 rounded"
-    placeholder="Enter your phone number"
-  />
-</div>
+          <label className="block text-gray-700 mb-2">Phone Number</label>
+          <input
+            type="tel"
+            name="number"
+            required
+            value={formData.number}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+            placeholder="Enter your phone number"
+          />
+        </div>
 
 
         <button
