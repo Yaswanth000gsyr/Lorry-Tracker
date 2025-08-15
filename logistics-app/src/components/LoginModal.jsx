@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // ✅ Best Practice: Define the API URL using the environment variable
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = https://lorry-tracker-backend.onrender.com;
 
 const LoginModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
