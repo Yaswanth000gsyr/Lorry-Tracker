@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+// ✅ Best Practice: Define the API URL using the environment variable
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const OwnerDashboard = () => {
   const navigate = useNavigate();
   const ownerName = "Welcome, Owner";
@@ -14,8 +17,6 @@ const OwnerDashboard = () => {
     // Clear local storage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("userType");
-    
     // Redirect to login page
     navigate("/");
   };
@@ -23,8 +24,10 @@ const OwnerDashboard = () => {
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
-        const token = localStorage.getItem("token"); // Or however you're storing JWT
-        const res = await axios.get("http://localhost:5000/api/vehicles", {
+        const token = localStorage.getItem("token");
+        
+        // ✅ Use the API_URL variable in your axios call
+        const res = await axios.get(`${API_URL}/api/vehicles`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -32,7 +35,7 @@ const OwnerDashboard = () => {
         setVehicles(res.data);
       } catch (err) {
         console.error("Error fetching vehicles:", err);
-        setError("Failed to load vehicles");
+        setError("Failed to load vehicles. Please try logging in again.");
       }
     };
 
