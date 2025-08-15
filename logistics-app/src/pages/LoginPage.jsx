@@ -1,110 +1,83 @@
+src/pages/LoginPage.jsx
+
 import React, { useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 
-// ✅ Best Practice: Define the API URL using the environment variable
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+import LoginModal from "../components/LoginModal";
 
-const LoginModal = ({ isOpen, onClose }) => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-  const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-    setError("");
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // ✅ Use the API_URL variable in the fetch call
-      const res = await fetch(`${API_URL}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      
-      if (res.ok) {
-        // Store token and user in localStorage
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+const LoginPage = () => {
 
-        const role = data.user?.role?.toLowerCase();
-        
-        if (role === "owner") {
-          navigate("/owner-dashboard");
-        } else if (role === "driver") {
-          navigate("/driver-dashboard");
-        } else if (role === "broker") {
-          navigate("/broker-dashboard");
-        } else {
-          setError("Unknown role. Cannot redirect.");
-        }
-        onClose(); // Close the modal on successful login
-      } else {
-        setError(data.message || "Login failed");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Server error. Please try again later.");
-    }
-  };
+  const navigate = useNavigate();
 
-  if (!isOpen) return null;
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm relative">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 text-gray-500 hover:text-black text-2xl font-bold"
-        >
-          &times;
-        </button>
-        <h2 className="text-2xl font-bold mb-4 text-center text-red-700">Login</h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              required
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
-              placeholder="Enter your email"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              required
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
-              placeholder="Enter your password"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-red-700 text-white py-2 rounded hover:bg-red-800"
-          >
-            Login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+
+
+  return (
+
+    <div className="min-h-screen bg-light-gray flex flex-col items-center justify-center p-8">
+
+      <h1 className="text-4xl font-bold mb-4 text-primary-red">Truck Tracker</h1>
+
+
+
+      <div className="max-w-2xl text-center mb-6">
+
+        <h2 className="text-2xl font-semibold mb-2 text-dark-blue">About</h2>
+
+        <p className="text-cool-gray">
+
+          Welcome to <strong className="text-dark-blue">Truck Tracker</strong> – a logistics management platform for lorry owners, drivers, and brokers.
+
+          Manage vehicles, assign trips, log expenses, and auto-generate invoices with ease.
+
+        </p>
+
+      </div>
+
+
+
+      <div className="flex gap-4 mt-4 justify-center">
+
+        <button
+
+          className="bg-primary-red text-light-gray px-6 py-2 rounded hover:bg-dark-red transition-colors"
+
+          onClick={() => setIsLoginOpen(true)}
+
+        >
+
+          Login
+
+        </button>
+
+        <button
+
+          className="bg-dark-blue text-light-gray px-6 py-2 rounded hover:bg-cool-gray transition-colors"
+
+          onClick={() => navigate("/signup")}
+
+        >
+
+          Signup (Owner/Broker/Driver)
+
+        </button>
+
+      </div>
+
+
+
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+    </div>
+
+  );
+
 };
 
-export default LoginModal;
+
+
+export default LoginPage;
