@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 // ✅ Best Practice: Define the API URL using the environment variable
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = 'https://lorry-tracker-backend.onrender.com';
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
