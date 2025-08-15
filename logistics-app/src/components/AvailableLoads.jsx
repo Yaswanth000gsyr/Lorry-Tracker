@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+// ✅ Use environment variable for the API URL
+const API_URL = 'https://lorry-tracker-backend.onrender.com';
+
 const AvailableLoads = () => {
   const [loads, setLoads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,33 +15,27 @@ const AvailableLoads = () => {
       try {
         const token = localStorage.getItem("token");
         const user = JSON.parse(localStorage.getItem("user"));
-        console.log("Token:", token ? "Found" : "Not found");
-        console.log("User:", user);
+
         if (!token || !user) {
-          console.log("No token or user, redirecting to login");
           navigate("/");
           return;
         }
         if (user.role !== "owner") {
-          console.log("User is not an owner, redirecting to login");
           setError("Access restricted to owners");
           navigate("/");
           return;
         }
 
-        console.log("Fetching loads from /api/loads");
-        const response = await fetch("http://localhost:5000/api/loads", {
+        // ✅ Use the API_URL variable
+        const response = await fetch(`${API_URL}/api/loads`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        console.log("Response status:", response.status);
         if (!response.ok) {
           const errorData = await response.json();
-          console.log("Error response:", errorData);
           if (response.status === 401 || response.status === 403) {
-            console.log("Unauthorized or forbidden, clearing localStorage");
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             navigate("/");
@@ -48,12 +45,11 @@ const AvailableLoads = () => {
         }
 
         const data = await response.json();
-        console.log("Fetched loads:", data);
         setLoads(data);
-        setLoading(false);
       } catch (err) {
         console.error("Fetch error:", err);
         setError(err.message);
+      } finally {
         setLoading(false);
       }
     };
