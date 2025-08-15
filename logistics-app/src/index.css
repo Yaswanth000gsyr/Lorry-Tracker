@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --dark-blue: #2B2D42;
+  --cool-gray: #8D99AE;
+  --light-gray: #EDF2F4;
+  --primary-red: #EF233C;
+  --dark-red: #D90429;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--light-gray);
+  color: var(--dark-blue);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Custom utility classes using the color palette */
+.bg-dark-blue { background-color: var(--dark-blue); }
+.bg-cool-gray { background-color: var(--cool-gray); }
+.bg-light-gray { background-color: var(--light-gray); }
+.bg-primary-red { background-color: var(--primary-red); }
+.bg-dark-red { background-color: var(--dark-red); }
+
+.text-dark-blue { color: var(--dark-blue); }
+.text-cool-gray { color: var(--cool-gray); }
+.text-light-gray { color: var(--light-gray); }
+.text-primary-red { color: var(--primary-red); }
+.text-dark-red { color: var(--dark-red); }
+
+.border-dark-blue { border-color: var(--dark-blue); }
+.border-cool-gray { border-color: var(--cool-gray); }
+.border-light-gray { border-color: var(--light-gray); }
+.border-primary-red { border-color: var(--primary-red); }
+.border-dark-red { border-color: var(--dark-red); }
