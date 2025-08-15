@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // --- Changes End ---
 
 // Middleware
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
