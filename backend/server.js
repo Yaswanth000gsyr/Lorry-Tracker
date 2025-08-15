@@ -1,17 +1,23 @@
+// --- Changes Start ---
+require('dotenv').config(); // Loads variables from .env file into process.env
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
+const cors =require("cors");
 const jwt = require("jsonwebtoken");
 
 const app = express();
-const PORT = 5000;
-const MONGO_URI = "mongodb+srv://gadiyamshanmukhay:03012005@cluster0.cpfsb3b.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-const CORS_ORIGIN = "https://lorry-tracker-00p7.onrender.com";
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
+
+// Use environment variables with fallbacks for local development
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
+const JWT_SECRET = process.env.JWT_SECRET;
+// --- Changes End ---
 
 // Middleware
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(express.json());
+
 // MongoDB connection
 mongoose
   .connect(MONGO_URI)
