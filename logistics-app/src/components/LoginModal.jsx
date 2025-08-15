@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// ✅ Best Practice: Define the API URL using the environment variable
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const LoginModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -20,20 +23,21 @@ const LoginModal = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
+      // ✅ Use the API_URL variable in the fetch call
+      const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      console.log("Login response:", data);
+      
       if (res.ok) {
         // Store token and user in localStorage
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
         const role = data.user?.role?.toLowerCase();
-        console.log("Role:", role);
+        
         if (role === "owner") {
           navigate("/owner-dashboard");
         } else if (role === "driver") {
@@ -43,7 +47,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         } else {
           setError("Unknown role. Cannot redirect.");
         }
-        onClose();
+        onClose(); // Close the modal on successful login
       } else {
         setError(data.message || "Login failed");
       }
