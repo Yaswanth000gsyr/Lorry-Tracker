@@ -37,6 +37,7 @@ const OwnerDashboard = () => {
 
   // ✅ "Generate Invoice" button has been added here
   const actions = [
+    { label: "📋 Plan a Trip", path: "/plan-trip" },
     { label: "📋 View Available Loads", path: "/loads" },
     { label: "🚛 Register Vehicle", path: "/add-vehicle" },
     { label: "👷 Vehicle Status", path: "/vehicle-status" },
