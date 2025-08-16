@@ -8,11 +8,9 @@ const app = express();
 
 // Use environment variables with fallbacks for local development
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
-const CORS_ORIGIN = process.env.CORS_ORIGIN;
-const JWT_SECRET = process.env.JWT_SECRET;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/lorrytracker";
+const JWT_SECRET = process.env.JWT_SECRET || "your-default-jwt-secret";
 
-// ✅ CHANGE 1: Correctly configured CORS to use your environment variable
 app.use(cors());
 app.use(express.json());
 
@@ -60,11 +58,11 @@ const vehicleSchema = new mongoose.Schema({
 const Vehicle = mongoose.model("Vehicle", vehicleSchema);
 
 const tripSchema = new mongoose.Schema({
-  vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle" },
+  vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle", required: true },
   driverName: String,
   startLocation: String,
   destination: String,
-  startDate: Date,
+  startDate: { type: Date, required: true },
   endDate: Date,
   distance: Number,
 });
@@ -121,7 +119,7 @@ const authenticateToken = async (req, res, next) => {
 };
 
 const restrictToRole = (roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
+  if (!req.user || !roles.includes(req.user.role)) {
     return res
       .status(403)
       .json({ message: `Access restricted to ${roles.join(" / ")}` });
@@ -160,7 +158,7 @@ app.post("/api/login", async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       token,
-      user: { email: user.email, role: user.role, number: user.number },
+      user: { _id: user._id, email: user.email, role: user.role, number: user.number },
     });
   } catch (err) {
     res.status(500).json({ message: "Login failed", error: err.message });
@@ -203,7 +201,6 @@ app.get(
   }
 );
 
-// Get loads posted by a specific broker
 app.get(
   "/api/loads/broker/:brokerId",
   authenticateToken,
@@ -221,7 +218,6 @@ app.get(
   }
 );
 
-// Get a specific load by ID
 app.get(
   "/api/loads/:id",
   authenticateToken,
@@ -240,7 +236,6 @@ app.get(
   }
 );
 
-// Update a load
 app.put(
   "/api/loads/:id",
   authenticateToken,
@@ -251,18 +246,14 @@ app.put(
       if (!load) {
         return res.status(404).json({ message: "Load not found" });
       }
-
-      // Ensure the broker can only edit their own loads
       if (load.postedBy.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: "Unauthorized to edit this load" });
       }
-
       const updatedLoad = await Load.findByIdAndUpdate(
         req.params.id,
         req.body,
         { new: true }
       ).populate("postedBy", "email number");
-
       res.status(200).json({ message: "Load updated successfully", load: updatedLoad });
     } catch (err) {
       res
@@ -272,7 +263,6 @@ app.put(
   }
 );
 
-// Delete a load
 app.delete(
   "/api/loads/:id",
   authenticateToken,
@@ -283,12 +273,9 @@ app.delete(
       if (!load) {
         return res.status(404).json({ message: "Load not found" });
       }
-
-      // Ensure the broker can only delete their own loads
       if (load.postedBy.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: "Unauthorized to delete this load" });
       }
-
       await Load.findByIdAndDelete(req.params.id);
       res.status(200).json({ message: "Load deleted successfully" });
     } catch (err) {
@@ -376,13 +363,21 @@ app.post(
   restrictToRole(["owner"]),
   async (req, res) => {
     try {
-      const trip = new Trip(req.body);
-      await trip.save();
-      res.json({ message: "Trip planned successfully", trip });
+        const { vehicleNumber, departureDate, ...tripDetails } = req.body;
+        const vehicle = await Vehicle.findOne({ number: vehicleNumber });
+        if (!vehicle) {
+            return res.status(404).json({ message: "Vehicle not found." });
+        }
+        const trip = new Trip({ 
+            ...tripDetails, 
+            vehicleId: vehicle._id, 
+            startDate: new Date(departureDate) 
+        });
+        await trip.save();
+        res.status(201).json({ message: "Trip planned successfully", trip });
     } catch (err) {
-      res
-        .status(500)
-        .json({ message: "Failed to plan trip", error: err.message });
+        console.error("Failed to plan trip:", err);
+        res.status(500).json({ message: "Failed to plan trip", error: err.message });
     }
   }
 );
@@ -405,7 +400,6 @@ app.get(
   }
 );
 
-// ✅ CHANGE 2: Added the missing route for the invoice generator
 app.get("/api/trips/total-expense", authenticateToken, async (req, res) => {
   try {
     const { vehicleNumber, tripDate } = req.query;
@@ -414,38 +408,30 @@ app.get("/api/trips/total-expense", authenticateToken, async (req, res) => {
       return res.status(400).json({ message: "Vehicle number and trip date are required." });
     }
 
-    // 1. Find the vehicle by its number to get its ID
     const vehicle = await Vehicle.findOne({ number: vehicleNumber });
     if (!vehicle) {
       return res.status(404).json({ message: "Vehicle not found." });
     }
 
-    // 2. Find the trip using the vehicle ID and the start date
     const tripStartDate = new Date(tripDate);
-    tripStartDate.setHours(0, 0, 0, 0);
+    tripStartDate.setUTCHours(0, 0, 0, 0);
     const tripEndDate = new Date(tripDate);
-    tripEndDate.setHours(23, 59, 59, 999);
+    tripEndDate.setUTCHours(23, 59, 59, 999);
 
     const trip = await Trip.findOne({
       vehicleId: vehicle._id,
       startDate: {
         $gte: tripStartDate,
-        $lt: tripEndDate,
+        $lte: tripEndDate,
       },
     });
 
     if (!trip) {
-      // If no trip is found, it means no expenses were logged for it. Return 0.
-      return res.status(200).json({ total: 0 });
+      return res.status(200).json({ total: 0, message: "No trip found for the given vehicle and date." });
     }
 
-    // 3. Find all expenses associated with that trip ID
     const expenses = await Expense.find({ tripId: trip._id });
-
-    // 4. Calculate the total expense
     const totalExpense = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
-
-    // 5. Send the total back
     res.status(200).json({ total: totalExpense });
 
   } catch (err) {
@@ -456,6 +442,9 @@ app.get("/api/trips/total-expense", authenticateToken, async (req, res) => {
 
 
 // ====== Expense Routes ====== //
+/**
+ * ✅ FIXED: This route now correctly links an expense to a trip.
+ */
 app.post(
   "/api/expense-log",
   authenticateToken,
@@ -470,76 +459,51 @@ app.post(
         category,
         date,
         notes,
-        tripId,
       } = req.body;
 
-      if (!category)
-        return res.status(400).json({ message: "Category is required" });
+      if (!vehicleNumber || !amount || !category) {
+        return res.status(400).json({ message: "Vehicle number, amount, and category are required" });
+      }
 
-      let fuel = 0;
-      let toll = 0;
-      let food = 0;
-      let maintenance = 0;
-      let other = 0;
+      // 1. Find the vehicle to get its ID
+      const vehicle = await Vehicle.findOne({ number: vehicleNumber });
+      if (!vehicle) {
+        return res.status(404).json({ message: "Invalid vehicle number" });
+      }
 
+      // 2. Find the trip this expense belongs to
+      const expenseDate = date ? new Date(date) : new Date();
+      const correspondingTrip = await Trip.findOne({
+        vehicleId: vehicle._id,
+        startDate: { $lte: expenseDate },
+        $or: [
+          { endDate: { $exists: false } }, // Trip is ongoing
+          { endDate: null },               // Trip endDate is not set
+          { endDate: { $gte: expenseDate } } // Or expense is within trip dates
+        ],
+      }).sort({ startDate: -1 }); // Get the most recent trip if there are overlaps
+
+      if (!correspondingTrip) {
+        return res.status(404).json({ message: "Could not find an active trip for this vehicle on the specified date." });
+      }
+      
+      // 3. Create the expense with the crucial `tripId` link
       const parsedAmount = Number(amount) || 0;
-
-      switch (category) {
-        case "Fuel":
-          fuel = parsedAmount;
-          break;
-        case "Toll":
-          toll = parsedAmount;
-          break;
-        case "Food":
-          food = parsedAmount;
-          break;
-        case "Maintenance":
-          maintenance = parsedAmount;
-          break;
-        case "Other":
-          other = parsedAmount;
-          break;
-        default:
-          return res.status(400).json({ message: "Invalid category" });
-      }
-
-      const totalAmount = fuel + toll + food + maintenance + other;
-
-      let vehicleId;
-      if (vehicleNumber) {
-        const vehicle = await Vehicle.findOne({ number: vehicleNumber });
-        if (!vehicle)
-          return res.status(400).json({ message: "Invalid vehicle number" });
-        vehicleId = vehicle._id;
-      }
-
-      if (tripId) {
-        const trip = await Trip.findById(tripId).populate("vehicleId");
-        if (!trip) return res.status(400).json({ message: "Invalid trip ID" });
-        if (!driverName) driverName = trip.driverName;
-        if (!vehicleId) vehicleId = trip.vehicleId?._id;
-      }
-
       const expense = new Expense({
-        vehicleId,
-        tripId,
+        vehicleId: vehicle._id,
+        tripId: correspondingTrip._id, // ✅ This is the critical fix
         driverName,
-        fuel,
-        toll,
-        food,
-        maintenance,
-        other,
-        amount: totalAmount,
+        amount: parsedAmount,
         expenseName,
         category,
         notes,
-        expenseDate: date ? new Date(date) : undefined,
+        expenseDate,
       });
 
       await expense.save();
-      res.json({ message: "Expense logged successfully", expense });
+      res.status(201).json({ message: "Expense logged and linked to trip successfully", expense });
     } catch (err) {
+      console.error("Failed to log expense:", err);
       res
         .status(500)
         .json({ message: "Failed to log expense", error: err.message });
@@ -563,11 +527,6 @@ app.get(
         tripDate: exp.tripId?.startDate
           ? new Date(exp.tripId.startDate).toLocaleDateString()
           : "N/A",
-        fuel: exp.fuel || 0,
-        toll: exp.toll || 0,
-        food: exp.food || 0,
-        maintenance: exp.maintenance || 0,
-        other: exp.other || 0,
         amount: exp.amount || 0,
         expenseName: exp.expenseName || "N/A",
         category: exp.category || "N/A",
@@ -586,6 +545,7 @@ app.get(
     }
   }
 );
+
 // ====== Trip Checklist Routes ====== //
 app.post(
   "/api/trip-checklist",
@@ -630,6 +590,7 @@ app.get(
 
 // ====== Global Error Middleware ====== //
 app.use((err, req, res, next) => {
+  console.error(err.stack); // Log the full error for debugging
   res
     .status(500)
     .json({ message: "Internal server error", error: err.message });
