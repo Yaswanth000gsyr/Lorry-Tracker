@@ -11,7 +11,22 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/lorrytracker";
 const JWT_SECRET = process.env.JWT_SECRET || "your-default-jwt-secret";
 
-app.use(cors());
+const allowedOrigins = [
+    'https://lorry-tracker.onrender.com', // 👈 CHANGE THIS
+    'http://localhost:3000' // For your local testing
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // MongoDB connection
