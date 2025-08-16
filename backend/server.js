@@ -1,8 +1,7 @@
-// --- Changes Start ---
 require('dotenv').config(); // Loads variables from .env file into process.env
 const express = require("express");
 const mongoose = require("mongoose");
-const cors =require("cors");
+const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
 const app = express();
@@ -12,9 +11,8 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 const CORS_ORIGIN = process.env.CORS_ORIGIN;
 const JWT_SECRET = process.env.JWT_SECRET;
-// --- Changes End ---
 
-// Middleware
+// ✅ CHANGE 1: Correctly configured CORS to use your environment variable
 app.use(cors());
 app.use(express.json());
 
@@ -407,6 +405,56 @@ app.get(
   }
 );
 
+// ✅ CHANGE 2: Added the missing route for the invoice generator
+app.get("/api/trips/total-expense", authenticateToken, async (req, res) => {
+  try {
+    const { vehicleNumber, tripDate } = req.query;
+
+    if (!vehicleNumber || !tripDate) {
+      return res.status(400).json({ message: "Vehicle number and trip date are required." });
+    }
+
+    // 1. Find the vehicle by its number to get its ID
+    const vehicle = await Vehicle.findOne({ number: vehicleNumber });
+    if (!vehicle) {
+      return res.status(404).json({ message: "Vehicle not found." });
+    }
+
+    // 2. Find the trip using the vehicle ID and the start date
+    const tripStartDate = new Date(tripDate);
+    tripStartDate.setHours(0, 0, 0, 0);
+    const tripEndDate = new Date(tripDate);
+    tripEndDate.setHours(23, 59, 59, 999);
+
+    const trip = await Trip.findOne({
+      vehicleId: vehicle._id,
+      startDate: {
+        $gte: tripStartDate,
+        $lt: tripEndDate,
+      },
+    });
+
+    if (!trip) {
+      // If no trip is found, it means no expenses were logged for it. Return 0.
+      return res.status(200).json({ total: 0 });
+    }
+
+    // 3. Find all expenses associated with that trip ID
+    const expenses = await Expense.find({ tripId: trip._id });
+
+    // 4. Calculate the total expense
+    const totalExpense = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+    // 5. Send the total back
+    res.status(200).json({ total: totalExpense });
+
+  } catch (err) {
+    console.error("Error fetching total expense:", err);
+    res.status(500).json({ message: "Server error while fetching total expense.", error: err.message });
+  }
+});
+
+
 // ====== Expense Routes ====== //
 app.post(
   "/api/expense-log",
@@ -466,7 +514,6 @@ app.post(
         vehicleId = vehicle._id;
       }
 
-      // If trip exists, fetch driver name and vehicle if not provided
       if (tripId) {
         const trip = await Trip.findById(tripId).populate("vehicleId");
         if (!trip) return res.status(400).json({ message: "Invalid trip ID" });
