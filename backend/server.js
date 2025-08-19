@@ -8,7 +8,7 @@ const app = express();
 
 // Use environment variables with fallbacks for local development
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/lorrytracker";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://gadiyamshanmukhay:gsyr13579@cluster0.cpfsb3b.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const JWT_SECRET = process.env.JWT_SECRET || "your-default-jwt-secret";
 
 const allowedOrigins = [
